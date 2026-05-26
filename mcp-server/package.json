@@ -1,0 +1,38 @@
+{
+  "name": "@ycroaster/mcp",
+  "version": "0.1.0",
+  "description": "MCP server for YC Roaster — roast and coach Y Combinator application drafts.",
+  "type": "module",
+  "main": "dist/server.js",
+  "bin": {
+    "ycroaster-mcp": "dist/stdio.js"
+  },
+  "files": [
+    "dist",
+    "reference"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "start": "node dist/stdio.js",
+    "dev": "tsc --watch",
+    "inspect": "npx @modelcontextprotocol/inspector node dist/stdio.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.5.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gjarrosson/yc-roaster-application-coach.git",
+    "directory": "mcp-server"
+  }
+}
