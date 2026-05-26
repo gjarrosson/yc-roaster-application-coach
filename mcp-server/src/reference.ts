@@ -1,33 +1,25 @@
-import { readFile, access } from "node:fs/promises";
-import { fileURLToPath } from "node:url";
-import { dirname, resolve } from "node:path";
 import { QUESTIONS, type QuestionId } from "./questions.js";
+import {
+  COMMON_MISTAKES,
+  SUCCESSFUL_PATTERNS,
+  QUESTION_GUIDANCE,
+} from "./reference-bundle.js";
 
-const here = dirname(fileURLToPath(import.meta.url));
-
-// Resolves the reference/ directory in two layouts:
-//   - in-repo dev:  mcp-server/dist/ → ../../reference
-//   - npm-bundled:  <pkg>/dist/      → ../reference (when published with a copy step)
-async function referenceRoot(): Promise<string> {
-  const candidates = [
-    resolve(here, "..", "reference"),
-    resolve(here, "..", "..", "reference"),
-  ];
-  for (const path of candidates) {
-    try {
-      await access(path);
-      return path;
-    } catch {
-      // try next
-    }
+export function getQuestionGuidance(id: QuestionId): string {
+  const text = QUESTION_GUIDANCE[id];
+  if (!text) {
+    throw new Error(
+      `No guidance bundled for question_id=${id} (file: ${QUESTIONS[id]?.guidance_file}). ` +
+        `Run npm run build to regenerate the reference bundle.`,
+    );
   }
-  throw new Error(
-    `reference/ directory not found. Tried: ${candidates.join(", ")}`,
-  );
+  return text;
 }
 
-export async function loadQuestionGuidance(id: QuestionId): Promise<string> {
-  const root = await referenceRoot();
-  const path = resolve(root, "question-guidance", QUESTIONS[id].guidance_file);
-  return readFile(path, "utf8");
+export function getCommonMistakes(): string {
+  return COMMON_MISTAKES;
+}
+
+export function getSuccessfulPatterns(): string {
+  return SUCCESSFUL_PATTERNS;
 }

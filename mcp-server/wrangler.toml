@@ -1,0 +1,28 @@
+name = "yc-roaster-mcp"
+main = "src/worker.ts"
+compatibility_date = "2025-05-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Custom domain — wire after DNS is on Cloudflare. See DESIGN.md §14 action items.
+# routes = [{ pattern = "mcp.ycroaster.com", custom_domain = true }]
+
+# Durable Object for MCP session state. agents/mcp expects the binding name
+# `MCP_OBJECT` by convention.
+[[durable_objects.bindings]]
+name = "MCP_OBJECT"
+class_name = "YCRoasterMCP"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["YCRoasterMCP"]
+
+# Per-IP rate limit across all MCP requests.
+# 60 requests per IP per 60-second window. Tighten or split per-tool in v0.3.
+[[unsafe.bindings]]
+name = "MCP_LIMITER"
+type = "ratelimit"
+namespace_id = "1001"
+simple = { limit = 60, period = 60 }
+
+[observability]
+enabled = true
