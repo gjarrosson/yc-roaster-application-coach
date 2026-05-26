@@ -1,6 +1,6 @@
 {
   "name": "@ycroaster/mcp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "MCP server for YC Roaster — roast and coach Y Combinator application drafts.",
   "type": "module",
   "main": "dist/server.js",
@@ -8,23 +8,30 @@
     "ycroaster-mcp": "dist/stdio.js"
   },
   "files": [
-    "dist",
-    "reference"
+    "dist"
   ],
   "scripts": {
+    "build:reference": "node scripts/build-reference.mjs",
+    "prebuild": "npm run build:reference",
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "start": "node dist/stdio.js",
     "dev": "tsc --watch",
-    "inspect": "npx @modelcontextprotocol/inspector node dist/stdio.js"
+    "inspect": "npx @modelcontextprotocol/inspector node dist/stdio.js",
+    "worker:dev": "wrangler dev",
+    "worker:deploy": "wrangler deploy",
+    "worker:typecheck": "wrangler types && tsc --noEmit"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "zod": "^3.23.0"
+    "agents": "^0.13.3",
+    "zod": "^4.1.8"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20251101.0",
     "@types/node": "^22.0.0",
-    "typescript": "^5.5.0"
+    "typescript": "^5.5.0",
+    "wrangler": "^4.0.0"
   },
   "engines": {
     "node": ">=18"
