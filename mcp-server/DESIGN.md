@@ -56,13 +56,18 @@ definitions:
 Both builds expose an identical tool surface so the founder experience is
 identical regardless of where the server runs.
 
-## 5. Tool surface (v1)
+## 5. Tool surface
 
-Five tools. Names chosen to be self-describing in tool pickers across surfaces.
+Four tools at public launch (v0.3), fifth (`submit_for_human_review`) lands
+in v0.4 once the api.ycroaster.com endpoint exists. Names chosen to be
+self-describing in tool pickers across surfaces.
 
 ### 5.1 `roast_application`
 
 Full-application critique. The headline tool — matches the brand.
+
+Input is hard-capped at **50KB**; payloads over **20KB** get a "too long,
+tighten before submitting" warning prepended to the critique.
 
 ```ts
 {
@@ -131,10 +136,11 @@ Lets a calling agent build its own coaching loop.
 { name: "list_questions", description: "List all YC application questions with current wording.", inputSchema: {} }
 ```
 
-### 5.5 `submit_for_human_review`
+### 5.5 `submit_for_human_review` (v0.4, not at launch)
 
 Hands off to the existing YC Roaster website. Founder gets real-alum feedback;
-we get a top-of-funnel signal.
+we get a top-of-funnel signal. **Not shipped in v0.1–v0.3** — depends on the
+new `POST /v1/submissions/mcp` endpoint described in §10 + §14.
 
 ```ts
 {
@@ -149,8 +155,9 @@ we get a top-of-funnel signal.
 }
 ```
 
-POSTs to `https://api.ycroaster.com/v1/submissions` (existing endpoint —
-confirm shape before shipping).
+POSTs to `https://api.ycroaster.com/v1/submissions/mcp` with a Worker-held
+bearer key (new endpoint, JSON-shaped, separate rate limits from the
+website form).
 
 ### 5.6 Canonical `question_id` values
 
@@ -308,19 +315,34 @@ when constructing the agent.
 - Weekly "tools called" summary emailed to admin@ — pulled from logs, no
   founder content.
 
-## 14. Open questions / deferred decisions
+## 14. Resolved decisions
 
-- Does `roast_application` ever need to call out to an LLM server-side
-  (deterministic "this answer scored N/10")? v1 says no — calling agent's
-  LLM does all reasoning. If founders ask for a deterministic score we
-  revisit, probably with Anthropic's Files API + a fixed model.
-- Domain: confirm `mcp.ycroaster.com` is available on the existing DNS zone.
-- npm scope: confirm `@ycroaster` is free; otherwise `@lobstercap/yc-roaster-mcp`.
-- Does the existing ycroaster.com submission endpoint accept programmatic
-  POSTs, or do we need to add one? Likely needs a new endpoint with a
-  rate-limited key.
-- Should `roast_application` cap input length (e.g. 50KB)? Probably yes —
-  protects the Worker and matches reasonable application sizes.
+- **Server-side LLM calls:** none. The server is a prompt assembler and
+  reference-data oracle; the calling agent's LLM does all reasoning. Zero
+  inference cost on us, no model-drift score rot. If founders ever beg for
+  a numeric score, ship a separate `score_application` tool so latency and
+  cost are explicit at the call site.
+- **Hosted domain:** `mcp.ycroaster.com`. Subdomain (not a path on the main
+  site) so the Worker has its own Cloudflare route, rate limits, and kill
+  switch. **Action item:** confirm the `ycroaster.com` zone is on
+  Cloudflare and the `mcp` record is free before v0.2 deploy.
+- **npm scope:** `@ycroaster` preferred, `@lobstercap/yc-roaster-mcp` as
+  fallback. Avoid unscoped — scoped packages prevent sibling squatting
+  (`@ycroaster/cli`, etc.) and signal trust in the registry. **Action
+  item:** run `npm view @ycroaster` to confirm availability and claim it
+  if free.
+- **Submission endpoint:** new dedicated `POST /v1/submissions/mcp` on
+  api.ycroaster.com, JSON-shaped, bearer-keyed, separate rate limits.
+  Reusing the website's form endpoint is rejected — it's CSRF-protected
+  and form-shaped, bolting MCP onto it is a maintenance trap. **Action
+  item:** spec and build this endpoint before v0.4; until then,
+  `submit_for_human_review` is skipped from the tool surface (not
+  deep-link fallback — we want the one-step founder experience or
+  nothing).
+- **Input length cap on `roast_application`:** 50KB hard cap, 20KB soft
+  warning. Below 20KB: no warning. 20–50KB: roast plus "draft is unusually
+  long — YC partners spend ~3 minutes per app, tighten it." Over 50KB:
+  clean MCP error citing the limit.
 
 ## 15. Phased milestones
 
