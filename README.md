@@ -4,6 +4,8 @@ A Claude Code skill that helps you write a stronger YC application by acting as 
 
 Built by Lobster Capital, the team behind [YC Roaster](https://ycroaster.com).
 
+> **Not using Claude Code?** The same coaching is also available as an MCP server for Claude.ai, ChatGPT, Cursor, and any other MCP-aware client. See [`mcp-server/`](./mcp-server/).
+
 ---
 
 ## What this is

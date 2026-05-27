@@ -1,6 +1,6 @@
 {
   "name": "@ycroaster/mcp",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "MCP server for YC Roaster — roast and coach Y Combinator application drafts.",
   "type": "module",
   "main": "dist/server.js",
