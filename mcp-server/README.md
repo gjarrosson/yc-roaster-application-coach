@@ -1,133 +1,133 @@
 # YC Roaster MCP Server
 
-An [MCP](https://modelcontextprotocol.io) server that exposes YC Roaster's
-coaching and roasting tools to any MCP-aware agent — Claude.ai, ChatGPT,
-Cursor, Claude Code, or your own agent built on the Anthropic / OpenAI SDKs.
+[![npm](https://img.shields.io/npm/v/@ycroaster/mcp.svg)](https://www.npmjs.com/package/@ycroaster/mcp)
 
-See [`DESIGN.md`](./DESIGN.md) for the full architecture.
+An [MCP](https://modelcontextprotocol.io) server that turns any MCP-aware
+agent into a YC application coach. Roast a full draft, roast a single
+section, pull YC's evaluation criteria for any application question — from
+Claude.ai, ChatGPT, Cursor, Claude Code, or your own agent built on the
+Anthropic / OpenAI SDKs.
 
-## Status
+Built by [YC Roaster](https://ycroaster.com) (Lobster Capital). Sibling to
+the [`yc-application-coach` Skill](../SKILL.md) in this repo.
 
-**v0.2 — hosted preview.** Two transports, four tools.
+## Install
 
-Tools:
+Two ways to run it. The hosted server reaches every surface; the local
+stdio build is byte-identical and never sends your draft over the network.
 
-- `list_questions` — canonical YC application questions, IDs, character limits
-- `get_question_guidance` — per-question evaluation criteria + strong-answer patterns
-- `roast_application` — full-application critique brief (50KB hard cap, 20KB soft)
-- `roast_section` — single-question critique brief
+### Hosted (any MCP client)
 
-The roast tools return a **structured critique brief** (rubric + draft +
-output-format instructions). The calling agent's LLM consumes that and
-produces the actual roast. The server itself makes zero LLM calls — see
-`DESIGN.md` §14.
+URL: **`https://mcp.ycroaster.com/mcp`**
 
-Coming next:
-
-- Registry publication + npm release (v0.3)
-- `submit_for_human_review` to api.ycroaster.com (v0.4)
-
-## Local dev
-
-```bash
-cd mcp-server
-npm install
-npm run build       # generates reference-bundle.ts and compiles TS
-npm run start       # stdio mode — waits on stdin
-```
-
-`npm run build` runs `scripts/build-reference.mjs` as a prebuild step. That
-inlines `../reference/**/*.md` into `src/reference-bundle.ts` so the same
-code works on Node (stdio) and Cloudflare Workers (no filesystem).
-
-## Try it with MCP Inspector
-
-```bash
-npm run inspect
-```
-
-Hit "List Tools" and call any of the four.
-
-## Run the Cloudflare Worker locally
-
-```bash
-npm run worker:dev   # wrangler dev on :8787
-curl http://localhost:8787/health
-```
-
-POST a JSON-RPC message to `/mcp`:
-
-```bash
-curl -X POST http://localhost:8787/mcp \
-  -H "content-type: application/json" \
-  -H "accept: application/json, text/event-stream" \
-  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"curl","version":"0"}}}'
-```
-
-## Deploy the Worker
-
-Pre-flight (see `DESIGN.md` §14 for the full checklist):
-
-1. `wrangler login` to your Cloudflare account.
-2. Confirm the `ycroaster.com` zone is on Cloudflare; uncomment the `routes`
-   line in `wrangler.toml` once `mcp.ycroaster.com` is wired.
-3. Create a rate-limiting namespace in the Cloudflare dashboard
-   (Workers → Rate Limiting) — note the namespace ID and replace `"1001"`
-   in `wrangler.toml`.
-
-Deploy:
-
-```bash
-npm run worker:deploy
-```
-
-## Wire it into a client
+| Client | How |
+| --- | --- |
+| Claude.ai | Settings → Connectors → Add custom connector → paste the URL |
+| ChatGPT (Developer Mode) | Settings → Connectors → Add → paste the URL |
+| Claude Code | `claude mcp add ycroaster https://mcp.ycroaster.com/mcp` |
+| Cursor (`~/.cursor/mcp.json`) | `{ "mcpServers": { "ycroaster": { "url": "https://mcp.ycroaster.com/mcp" } } }` |
+| Anthropic / OpenAI Agents SDK | Pass the URL when constructing the MCP connector |
 
 ### Local stdio (privacy-first)
 
-**Claude Code:**
+Zero network egress for the roast tools. See [`PRIVACY.md`](./PRIVACY.md).
 
 ```bash
-claude mcp add ycroaster -- node /absolute/path/to/mcp-server/dist/stdio.js
+# One-shot via npx (no install)
+npx -y @ycroaster/mcp
 ```
 
-**Cursor** (`~/.cursor/mcp.json`):
+Then in your MCP client config:
 
 ```json
 {
   "mcpServers": {
     "ycroaster": {
-      "command": "node",
-      "args": ["/absolute/path/to/mcp-server/dist/stdio.js"]
+      "command": "npx",
+      "args": ["-y", "@ycroaster/mcp"]
     }
   }
 }
 ```
 
-### Hosted (any client)
+For Claude Code: `claude mcp add ycroaster -- npx -y @ycroaster/mcp`.
 
-Once deployed to `mcp.ycroaster.com` (or your dev Worker URL):
+## Tools
 
-- **Claude.ai:** Settings → Connectors → Add custom connector → URL
-- **ChatGPT (Developer Mode):** Settings → Connectors → Add → URL
-- **Claude Code:** `claude mcp add ycroaster https://mcp.ycroaster.com/mcp`
-- **Cursor:** `{ "mcpServers": { "ycroaster": { "url": "https://mcp.ycroaster.com/mcp" } } }`
+| Tool | What it does |
+| --- | --- |
+| `list_questions` | Returns the canonical YC application questions, IDs, and character limits. |
+| `get_question_guidance` | Returns YC's evaluation criteria, strong-answer patterns, and common failures for one question. |
+| `roast_application` | Returns a critique brief (rubric + draft + output-format instructions) the calling LLM uses to roast the full draft. 50KB hard cap, 20KB soft warning. |
+| `roast_section` | Same shape as `roast_application`, scoped to one question. |
+
+The roast tools assemble a **brief**, not a roast. The calling agent's LLM
+does the reasoning — the server makes zero LLM calls, so you don't pay
+twice and the output stays in your agent's voice and model.
+
+`submit_for_human_review` (hand off a draft to a YC alum for free review at
+ycroaster.com) lands in v0.4.
+
+## Privacy
+
+See [`PRIVACY.md`](./PRIVACY.md). Short version: hosted server logs request
+metadata only, **not your draft text**. The stdio build keeps everything
+on your machine.
+
+## Develop
+
+```bash
+cd mcp-server
+npm install
+npm run build       # generates reference-bundle.ts and compiles TS
+npm run start       # stdio mode
+npm run inspect     # MCP Inspector against the stdio build
+npm run worker:dev  # wrangler dev on :8787 — local hosted server
+```
+
+`npm run build` runs `scripts/build-reference.mjs` as a prebuild step,
+inlining `../reference/**/*.md` into `src/reference-bundle.ts`. That bundle
+is what makes the same code work on Node (stdio) and on Cloudflare Workers
+(no filesystem).
 
 ## Layout
 
 ```
 mcp-server/
   src/
-    questions.ts          — canonical question registry
-    roast.ts              — critique brief builders, input caps
-    reference.ts          — bundle accessors (used by tools)
-    reference-bundle.ts   — generated; markdown inlined from ../reference/
-    server.ts             — McpServer factory + tool registration
-    stdio.ts              — stdio entry point
-    worker.ts             — Cloudflare Worker entry (Durable Object + rate limit)
+    questions.ts          canonical question registry
+    roast.ts              critique brief builders, input caps
+    reference.ts          bundle accessors
+    reference-bundle.ts   generated; markdown inlined from ../reference/
+    server.ts             McpServer factory + tool registration
+    stdio.ts              stdio entry point
+    worker.ts             Cloudflare Worker entry
   scripts/
-    build-reference.mjs   — generates reference-bundle.ts
-  wrangler.toml           — Worker config
-  package.json
-  tsconfig.json
+    build-reference.mjs   generates reference-bundle.ts
+  server.json             MCP Registry manifest
+  wrangler.toml           Worker config
+  PRIVACY.md
+  DESIGN.md
 ```
+
+## Release
+
+Tag-driven. The `mcp-release.yml` workflow runs on `mcp-vX.Y.Z` tags and:
+
+1. Verifies the tag matches `package.json` + `server.json` versions.
+2. Publishes `@ycroaster/mcp` to npm with provenance.
+3. Publishes the updated `server.json` to the MCP Registry via GitHub OIDC.
+4. Deploys the Worker to Cloudflare.
+
+Required repository secrets:
+
+- `NPM_TOKEN` — npm automation token with publish access on `@ycroaster`
+- `CLOUDFLARE_API_TOKEN` — Workers deploy permission
+- `CLOUDFLARE_ACCOUNT_ID`
+
+Bump the version in three places (`package.json`, `server.json`,
+`src/server.ts` `SERVER_VERSION`), commit, tag `mcp-vX.Y.Z`, push the tag.
+
+## License
+
+MIT.

@@ -1,0 +1,39 @@
+name: MCP server CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "mcp-server/**"
+      - "reference/**"
+      - ".github/workflows/mcp-ci.yml"
+  pull_request:
+    paths:
+      - "mcp-server/**"
+      - "reference/**"
+      - ".github/workflows/mcp-ci.yml"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mcp-server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm ci
+      - run: npm run build
+      - name: Smoke-test stdio server
+        run: |
+          {
+            echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"ci","version":"0"}}}'
+            echo '{"jsonrpc":"2.0","method":"notifications/initialized"}'
+            echo '{"jsonrpc":"2.0","id":2,"method":"tools/list"}'
+          } | timeout 10 node dist/stdio.js | tee /tmp/smoke.out
+          grep -q '"roast_application"' /tmp/smoke.out
+          grep -q '"roast_section"' /tmp/smoke.out
+          grep -q '"list_questions"' /tmp/smoke.out
+          grep -q '"get_question_guidance"' /tmp/smoke.out
